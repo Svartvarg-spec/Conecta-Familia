@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recomendador de Actividades Pedagógicas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos personalizados adicionales */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .error-message {
+            color: #EF4444; /* red-500 */
+            font-size: 0.875rem; /* text-sm */
+            margin-top: 0.25rem; /* mt-1 */
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        input[type="number"]:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); /* Sombra azul suave */
+        }
+        /* Estilos para el Modal */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50; /* Asegurar que esté por encima de otros elementos */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem; /* p-8 */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* shadow-xl */
+            width: 90%;
+            max-width: 500px; /* Similar a max-w-lg */
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-backdrop.active .modal-content {
+            transform: scale(1);
+        }
+        /* Estilo para actividad completada */
+        .activity-done {
+            opacity: 0.7;
+            border-left-width: 4px;
+            border-left-color: #10B981; /* emerald-500 */
+        }
+        .activity-done .activity-name {
+            text-decoration: line-through;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 text-gray-800 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-2xl fade-in">
+
+        <section id="form-section">
+            <header class="text-center mb-8">
+                 <svg class="w-16 h-16 mx-auto mb-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                 </svg>
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Actividades <span class="text-blue-600">a tu Medida</span></h1>
+                <p class="text-lg text-gray-600">Descubre ideas divertidas y educativas para el desarrollo de tu hijo/a.</p>
+                <p class="text-sm text-gray-500 mt-3">Solo necesitamos saber su edad para empezar.</p>
+            </header>
+
+            <form id="recommendation-form" class="space-y-5">
+                <div>
+                    <label for="child-age" class="block text-sm font-medium text-gray-700 mb-1">Edad del niño/a (en años):</label>
+                    <input type="number" id="child-age" name="child-age" min="0" max="12" required
+                           placeholder="Ej: 3"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:border-blue-500 transition duration-150 ease-in-out">
+                    <p id="age-error" class="error-message hidden">Por favor, ingresa una edad válida (número entre 0 y 12).</p>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transform hover:scale-105 transition duration-300 ease-in-out">
+                    ✨ ¡Mostrar Recomendaciones! ✨
+                </button>
+            </form>
+        </section>
+
+        <section id="recommendations-section" class="hidden mt-8 fade-in">
+            <h2 class="text-3xl font-bold text-center text-gray-900 mb-2">¡Actividades Sugeridas!</h2>
+            <p class="text-center text-gray-600 mb-8">Aquí tienes algunas ideas basadas en la edad:</p>
+
+            <div id="recommendations-list" class="space-y-5">
+                </div>
+
+            <button id="back-to-form-button"
+                    class="mt-8 w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition duration-150 ease-in-out">
+                ← Volver e ingresar otra edad
+            </button>
+        </section>
+    </div>
+
+    <div id="activity-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-2xl font-bold text-gray-900 mb-4"></h3>
+            <p id="modal-description" class="text-gray-600 mb-6"></p>
+            <p id="modal-area" class="text-sm text-gray-500 mb-1"></p>
+            <p id="modal-age-range" class="text-sm text-gray-500 mb-6"></p>
+            <button id="modal-close-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                Cerrar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Elementos del DOM ---
+        const formSection = document.getElementById('form-section');
+        const recommendationForm = document.getElementById('recommendation-form');
+        const childAgeInput = document.getElementById('child-age');
+        const ageError = document.getElementById('age-error');
+        const recommendationsSection = document.getElementById('recommendations-section');
+        const recommendationsList = document.getElementById('recommendations-list');
+        const backToFormButton = document.getElementById('back-to-form-button');
+
+        // Modal Elements
+        const activityModal = document.getElementById('activity-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDescription = document.getElementById('modal-description');
+        const modalArea = document.getElementById('modal-area');
+        const modalAgeRange = document.getElementById('modal-age-range');
+        const modalCloseButton = document.getElementById('modal-close-button');
+
+
+        // --- Datos Simulados de Actividades ---
+        const allActivities = [
+            // Edades 0-2
+            { id: 1, name: 'Juego de Apilar Bloques Grandes', description: 'Fomenta la coordinación mano-ojo y conceptos espaciales. Ideal para estimular la motricidad fina y la comprensión de causa y efecto.', age_min: 0, age_max: 2, area: 'Motricidad Fina' },
+            { id: 2, name: 'Cantar Canciones con Gestos', description: 'Estimula el lenguaje, la memoria y la conexión emocional. Las repeticiones y los gestos ayudan a fijar nuevo vocabulario.', age_min: 0, age_max: 3, area: 'Lenguaje' },
+            { id: 3, name: 'Explorar Texturas (Telas, Esponjas)', description: 'Desarrolla los sentidos táctiles y la curiosidad. Ofrece diferentes materiales para que el bebé toque y sienta.', age_min: 0, age_max: 2, area: 'Cognitivo' },
+            { id: 4, name: 'Esconder y Encontrar Objetos', description: 'Introduce la permanencia del objeto y fomenta la atención. Un juego simple como tapar un juguete con una tela puede ser muy estimulante.', age_min: 1, age_max: 3, area: 'Cognitivo' },
+
+            // Edades 3-5
+            { id: 5, name: 'Rompecabezas Simples (4-12 piezas)', description: 'Mejora la resolución de problemas, la motricidad fina y la paciencia. Comienza con pocas piezas y aumenta la dificultad gradualmente.', age_min: 3, age_max: 5, area: 'Cognitivo' },
+            { id: 6, name: 'Dibujar y Colorear', description: 'Fomenta la creatividad, la expresión y el control del lápiz. Proporciona diferentes herramientas como crayones, lápices de colores y pintura de dedos.', age_min: 2, age_max: 5, area: 'Motricidad Fina' },
+            { id: 7, name: 'Juego de Roles (Doctor, Cocina)', description: 'Desarrolla habilidades sociales, lenguaje e imaginación. Permite que el niño explore diferentes roles y situaciones.', age_min: 3, age_max: 6, area: 'Social/Emocional' },
+            { id: 8, name: 'Leer Cuentos Cortos Juntos', description: 'Amplía el vocabulario, la comprensión lectora y el vínculo afectivo. Haz preguntas sobre la historia para fomentar la participación.', age_min: 2, age_max: 6, area: 'Lenguaje' },
+            { id: 9, name: 'Clasificar Objetos por Color o Forma', description: 'Introduce conceptos matemáticos básicos y habilidades de categorización. Usa objetos cotidianos como bloques, botones o juguetes.', age_min: 3, age_max: 5, area: 'Cognitivo' },
+            { id: 10, name: 'Ayudar en Tareas Simples (Guardar juguetes)', description: 'Fomenta la responsabilidad, la autonomía y la colaboración. Asigna tareas adecuadas a su edad y capacidad.', age_min: 3, age_max: 6, area: 'Autonomía' },
+
+            // Edades 6+
+            { id: 11, name: 'Juegos de Mesa Sencillos (Memoria, Ludo)', description: 'Enseña a seguir reglas, tomar turnos y manejar la frustración. Fomenta la interacción social y el pensamiento estratégico.', age_min: 5, age_max: 8, area: 'Social/Emocional' },
+            { id: 12, name: 'Construir con LEGOs o similares', description: 'Desarrolla la planificación, habilidades espaciales, creatividad y motricidad fina. Permite construcciones libres o siguiendo instrucciones.', age_min: 5, age_max: 10, area: 'Motricidad Fina' },
+            { id: 13, name: 'Escribir Historias Cortas o Postales', description: 'Practica la escritura, la creatividad y la organización de ideas. Anima al niño a compartir sus creaciones.', age_min: 6, age_max: 10, area: 'Lenguaje' },
+            { id: 14, name: 'Experimentos Científicos Caseros Simples', description: 'Fomenta la curiosidad, el pensamiento crítico y la comprensión del mundo. Busca experimentos seguros y adecuados para su edad.', age_min: 6, age_max: 12, area: 'Cognitivo' },
+            { id: 15, name: 'Aprender a Atarse los Zapatos', description: 'Desarrolla la motricidad fina, la coordinación y la autonomía. Requiere paciencia y práctica.', age_min: 5, age_max: 7, area: 'Autonomía' },
+        ];
+
+        // --- Lógica del Formulario ---
+        recommendationForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const age = parseInt(childAgeInput.value, 10);
+            let isValid = true;
+
+            if (isNaN(age) || age < 0 || age > 12) {
+                ageError.classList.remove('hidden');
+                childAgeInput.classList.add('border-red-500');
+                childAgeInput.classList.remove('border-gray-300');
+                isValid = false;
+            } else {
+                ageError.classList.add('hidden');
+                childAgeInput.classList.remove('border-red-500');
+                childAgeInput.classList.add('border-gray-300');
+            }
+
+            if (!isValid) return;
+
+            const recommendedActivities = allActivities.filter(activity => age >= activity.age_min && age <= activity.age_max);
+            const maxRecommendations = 5;
+            const finalRecommendations = recommendedActivities.slice(0, maxRecommendations);
+
+            formSection.classList.add('hidden');
+            recommendationsSection.classList.remove('hidden');
+            void recommendationsSection.offsetWidth;
+            recommendationsSection.classList.add('fade-in');
+            displayRecommendations(finalRecommendations);
+        });
+
+        // --- Funciones del Modal ---
+        function openModal(activity) {
+            modalTitle.textContent = activity.name;
+            modalDescription.textContent = activity.description; // Usar la descripción existente, podría ser más larga en una versión real
+            modalArea.textContent = `Área de enfoque: ${activity.area}`;
+            modalAgeRange.textContent = `Edad recomendada: ${activity.age_min} - ${activity.age_max} años`;
+            activityModal.classList.add('active');
+        }
+
+        function closeModal() {
+            activityModal.classList.remove('active');
+        }
+
+        modalCloseButton.addEventListener('click', closeModal);
+        // Cerrar modal si se hace clic fuera del contenido del modal
+        activityModal.addEventListener('click', (event) => {
+            if (event.target === activityModal) {
+                closeModal();
+            }
+        });
+
+
+        // --- Función para Mostrar Recomendaciones ---
+        function displayRecommendations(activities) {
+            recommendationsList.innerHTML = '';
+
+            if (activities.length === 0) {
+                recommendationsList.innerHTML = '<p class="text-center text-gray-500 bg-gray-50 p-4 rounded-lg">No se encontraron actividades específicas para esta edad en nuestro catálogo inicial. ¡Pronto añadiremos más!</p>';
+                return;
+            }
+
+            activities.forEach((activity, index) => {
+                const activityElement = document.createElement('div');
+                activityElement.style.animationDelay = `${index * 100}ms`;
+                activityElement.className = 'bg-white p-5 rounded-lg border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center hover:shadow-md transition-all duration-200 fade-in';
+                activityElement.dataset.activityId = activity.id; // Guardar ID para referencia
+
+                const textContent = document.createElement('div');
+                textContent.className = 'flex-grow mb-4 md:mb-0 md:mr-4';
+                textContent.innerHTML = `
+                    <h3 class="text-lg font-semibold text-gray-800 activity-name">${activity.name}</h3>
+                    <p class="text-sm text-gray-600 mt-1 mb-2">${activity.description.substring(0, 100)}...</p> <span class="inline-block bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">${activity.area}</span>
+                `;
+
+                const buttonGroup = document.createElement('div');
+                buttonGroup.className = 'flex space-x-2 flex-shrink-0 w-full md:w-auto';
+
+                const detailsButton = document.createElement('button');
+                detailsButton.textContent = 'Detalle';
+                detailsButton.className = 'flex-1 md:flex-none px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-md shadow-sm transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-400';
+                detailsButton.onclick = () => openModal(activity); // Llamar a openModal con la actividad
+
+                const doneButton = document.createElement('button');
+                doneButton.textContent = 'Hecha';
+                doneButton.className = 'flex-1 md:flex-none px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-md shadow-sm transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-400';
+                doneButton.onclick = function() { // Usar function para tener 'this'
+                    activityElement.classList.toggle('activity-done');
+                    if (activityElement.classList.contains('activity-done')) {
+                        this.textContent = 'Deshacer';
+                        this.classList.remove('bg-amber-500', 'hover:bg-amber-600', 'focus:ring-amber-400');
+                        this.classList.add('bg-slate-400', 'hover:bg-slate-500', 'focus:ring-slate-300');
+                    } else {
+                        this.textContent = 'Hecha';
+                        this.classList.remove('bg-slate-400', 'hover:bg-slate-500', 'focus:ring-slate-300');
+                        this.classList.add('bg-amber-500', 'hover:bg-amber-600', 'focus:ring-amber-400');
+                    }
+                };
+
+                buttonGroup.appendChild(detailsButton);
+                buttonGroup.appendChild(doneButton);
+
+                activityElement.appendChild(textContent);
+                activityElement.appendChild(buttonGroup);
+
+                recommendationsList.appendChild(activityElement);
+            });
+        }
+
+        // --- Botón para Volver al Formulario ---
+        backToFormButton.addEventListener('click', () => {
+            recommendationsSection.classList.add('hidden');
+            recommendationsSection.classList.remove('fade-in');
+            formSection.classList.remove('hidden');
+            void formSection.offsetWidth;
+            formSection.classList.add('fade-in');
+            recommendationForm.reset();
+            ageError.classList.add('hidden');
+            childAgeInput.classList.remove('border-red-500');
+            childAgeInput.classList.add('border-gray-300');
+        });
+
+        formSection.classList.add('fade-in');
+    </script>
+
+</body>
+</html>
